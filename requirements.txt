@@ -1,0 +1,9 @@
+flask
+boto3
+pymongo
+python-dotenv
+pyjwt
+twilio
+gunicorn
+flask-cors
+dnspython
