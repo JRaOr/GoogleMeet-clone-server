@@ -122,3 +122,18 @@ def email():
     return jsonify({
         "message": "Successfully sent email"
     }), 200
+
+@user.route('/check/available/<username>', methods=['GET'])
+def checkAvailable(username):
+    query = { "username": username }
+    mongoCollection = mongoDB["users"]
+    if mongoCollection.count_documents(query) != 0:
+        return jsonify({
+            "message": "Nombre de usuario no disponible",
+            "available": False
+        }), 200
+    else:
+        return jsonify({
+            "message": "Nombre de usuario disponible",
+            "available": True
+        }), 200
