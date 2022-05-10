@@ -6,6 +6,9 @@ import jwt
 import pymongo
 import datetime
 import functions as ftn
+from werkzeug.utils import secure_filename
+import boto3
+import uuid
 user = Blueprint('user', __name__)
 
 mongo_user = os.getenv('MONGO_USER')
@@ -137,3 +140,56 @@ def checkAvailable(username):
             "message": "Nombre de usuario disponible",
             "available": True
         }), 200
+
+@user.route('/remove/image', methods=['DELETE'])
+def removeImage():
+    res = ftn.checkToken(request)
+    if res['success']:
+        decoded_token = checkToken(request)
+        mongoCollection = mongoDB["users"]
+        mongoCollection.update_one(
+            {'username': decoded_token['username']},
+            {'$set': {'avatar': None}}
+        )
+        return jsonify({
+            "message": "Successfully removed image"
+        }), 200
+    else:
+        return jsonify({
+            "message": "Invalid token"
+        }), 401
+
+@user.route('/upload/image', methods=['POST'])
+def uploadImage():
+    res = ftn.checkToken(request)
+    print(res)
+    if res['success']:
+        try:
+            file = request.files['file']
+            if file:
+                filename = secure_filename(file.filename)
+                client = boto3.client('s3', aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'), aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'))
+                new_filename = str(uuid.uuid4()) + '.' + filename.split('.')[-1]
+                client.upload_fileobj(file, os.getenv('AWS_BUCKET'), 'users/' + new_filename, ExtraArgs={'ACL': 'public-read'})
+                mongoCollection = mongoDB["users"]
+                mongoCollection.update_one(
+                    {'username': res['data']['username']},
+                    {'$set': {'avatar': 'https://meet-clone-bucket.s3.amazonaws.com/users/' + new_filename}}
+                )
+                return jsonify({
+                    "message": "Successfully uploaded image"
+                }), 200
+                
+            else:
+                return jsonify({
+                    "message": "No file uploaded"
+                }), 400
+        except Exception as e:
+                print(e)
+                return jsonify({
+                    "message": "Error uploading image"
+                }), 201
+    else:
+        return jsonify({
+            "message": "Invalid token"
+        }), 401
