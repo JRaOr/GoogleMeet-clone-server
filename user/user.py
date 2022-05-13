@@ -110,6 +110,7 @@ def email():
         decoded_token = checkToken(request)
         print(decoded_token)
         try:
+            print(os.getenv('SENDER_EMAIL'))
             email_response = ftn.sendInvitationEmail(data['email'], 'Invitation for meeting!', data['message'], data['username'], data['roomLink'])
             print(email_response)
             return jsonify({
